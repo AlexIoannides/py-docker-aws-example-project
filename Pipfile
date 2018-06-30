@@ -8,6 +8,8 @@ flask = "*"
 
 [dev-packages]
 "boto3" = "*"
+ipython = "*"
+docker = "*"
 
 [requires]
 python_version = "3.6"
