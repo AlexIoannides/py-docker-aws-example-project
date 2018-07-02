@@ -2,55 +2,108 @@
 deploy_to_aws.py
 ~~~~~~~~~~~~~~~~
 
+A simple script that demonstrates how the docker and AWS Python clients
+can be used to automate the process of: building a Docker image, as
+defined by the Dockerfile in the project's root directory; pushing the
+image to AWS's Elastic Container Registry (ECR); and, then forcing a
+redeployment of a AWS Elastic Container Service (ECS) that uses the
+image to host the service. 
+
+For now, it is assumed that the AWS infrastructure is already in
+existence and that Docker is running on the host machine.
 """
 
+import json
+import base64
+
 import boto3
+import docker
 
-AWS_ACCESS_KEY_ID = 'AKIAI5V3AYAPFMLCXSHQ'
-AWS_SECRET_ACCESS_KEY = 'hqzqA4Xhm7e3yh809OLTwY//E/o1pgp5jq3fH6Bt'
-AWS_REGION_NAME = 'eu-west-2'
+ECS_CLUSTER = 'py-docker-aws-example-project-cluster'
+ECS_SERVICE = 'py-docker-aws-example-project-service'
 
-# ECR example
-ecr = boto3.client(
-    'ecr',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=AWS_REGION_NAME,
-)
+LOCAL_REPOSITORY = 'py-docker-aws-example-project:latest'
 
-ecr_reg_token = (
-    ecr
-    .get_authorization_token()
-    ['authorizationData'][0]['authorizationToken'])
 
-print(ecr_reg_token)
+def main():
+    """Build Docker image, push to AWS and update ECS service.
+    
+    :rtype: None
+    """
 
-# docker login
-# TODO
+    # get AWS credentials
+    aws_credentials = read_aws_credentials()
+    access_key_id = aws_credentials['access_key_id']
+    secret_access_key = aws_credentials['secret_access_key']
+    aws_region = aws_credentials['region']
 
-# build image
-# TODO
+    # build Docker image
+    docker_client = docker.from_env()
+    image, build_log = docker_client.images.build(
+        path='.', tag=LOCAL_REPOSITORY, rm=True)
 
-# push image
-# TODO
+    # get AWS ECR login token
+    ecr_client = boto3.client(
+        'ecr', aws_access_key_id=access_key_id, 
+        aws_secret_access_key=secret_access_key, region_name=aws_region)
 
-# [optional] create cluster in new VPC with >= t2.medium
-# -> in security group (firewall) setup allow rule for single IP to assist debugging (e.g. 82.16.104.175/32)
-# TODO
+    ecr_credentials = (
+        ecr_client
+        .get_authorization_token()
+        ['authorizationData'][0])
 
-# [optional] create application load balancer for new VPC 
-# -> create custom security group for the ELB that allows anything from the outside world
-# TODO
+    ecr_username = 'AWS'
 
-# [optional] modify cluster security group to allow ELB access (reference ELB's security group)
-# TODO
+    ecr_password = (
+        base64.b64decode(ecr_credentials['authorizationToken'])
+        .replace(b'AWS:', b'')
+        .decode('utf-8'))
 
-# [optional] create target group for new VPC (no need to add the instances in this step)
-# -> modify the health check path to /microservice otherwise it won't get 200s and and re-register hosts
-# TODO
+    ecr_url = ecr_credentials['proxyEndpoint']
 
-# create/update task
-# TODO
+    # get Docker to login/authenticate with ECR
+    docker_client.login(
+        username=ecr_username, password=ecr_password, registry=ecr_url)
 
-# create/update service and choose application load balancing 
-# TODO
+    # tag image for AWS ECR
+    ecr_repo_name = '{}/{}'.format(
+        ecr_url.replace('https://', ''), LOCAL_REPOSITORY)
+
+    image.tag(ecr_repo_name, tag='latest')
+
+    # push image to AWS ECR
+    push_log = docker_client.images.push(ecr_repo_name, tag='latest')
+
+    # force new deployment of ECS service
+    ecs_client = boto3.client(
+        'ecs', aws_access_key_id=access_key_id,
+        aws_secret_access_key=secret_access_key, region_name=aws_region)
+
+    ecs_client.update_service(
+        cluster=ECS_CLUSTER, service=ECS_SERVICE, forceNewDeployment=True)
+
+    return None
+
+
+def read_aws_credentials(filename='.aws_credentials.json'):
+    """Read AWS credentials from file.
+    
+    :param filename: Credentials filename, defaults to '.aws_credentials.json'
+    :param filename: str, optional
+    :return: Dictionary of AWS credentials.
+    :rtype: Dict[str, str]
+    """
+
+    with open(filename) as json_data:
+        credentials = json.load(json_data)
+
+    for required_field in ('access_key_id', 'secret_access_key', 'region'):
+        if required_field not in credentials.keys():
+            msg = '"{}" cannot be found in {}'.format(required_field, filename)
+            raise KeyError(msg)
+
+    return credentials
+
+
+if __name__ == '__main__':
+    main()
