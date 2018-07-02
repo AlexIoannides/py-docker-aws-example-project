@@ -1,3 +1,4 @@
 .vscode/
+.aws_credentials.json
 __pycache__/
 test.rest

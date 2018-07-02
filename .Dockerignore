@@ -1,5 +1,6 @@
 .git
 .gitignore
+.aws_credentials.json
 .vscode/
 __pycache__/
 README.md
