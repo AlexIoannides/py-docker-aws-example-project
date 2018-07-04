@@ -1,20 +1,30 @@
 [![Build Status](https://travis-ci.org/AlexIoannides/py-docker-aws-example-project.svg?branch=master)](https://travis-ci.org/AlexIoannides/py-docker-aws-example-project)
 
-# Automated Deployment of a Python Service to AWS, using Docker and Boto3
+# Automated Testing and Deployment of a Python Micro-service to AWS, using Docker, Boto3 and Travis-CI
 
-The purpose of this project is to demonstrate how a simple Flask-based micro-service, with a RESTful API, can be deployed to a production-like environment on AWS, where the deployment process is automated from a single Python script that performs the following steps without any manual intervention:
+The purpose of this project is to demonstrate how to automate the testing and deployment of a simple Flask-based (RESTful) micro-service to a production-like environment on AWS. The deployment pipeline is handled by [Travis-CI](https://travis-ci.org), that has been granted access to this GitHub repository and configured to run upon a pull request or a merge to the master branch. The pipeline is defined in the `.travis.yaml` file and consists of the following steps:
 
-1. builds the required Docker image;
-2. pushes the image to AWS's Elastic Container Registry (ECR); and,
-3. triggers a rolling redeployment of the service across an Elastic Container Service (ECS) cluster.
+1. define which Python version to use;
+2. install the `Pipenv` package using `pip`;
+3. use `Pipenv` to install the project dependencies defined in `Pipfile.lock`;
+4. run unit tests by executing `pipenv run python -m unittest tests/*.py`; and,
+5. if on the `master` branch - e.g. if a pull request has been merged - then start Docker and run the `deploy_to_aws.py` script.
 
-Although the micro-service used in this example - as defined in `microservice/api.py` module - only returns a simple message upon a simple `GET` request, it could just as easily be a Machine Learning (ML) model-scoring service that receives the values of feature variables and returns a prediction.
+The `deploy_to_aws.py` script defines the deployment process, which performs the following steps without any manual intervention:
+
+1. build the required Docker image;
+2. pushe the image to AWS's Elastic Container Registry (ECR); and,
+3. trigger a rolling redeployment of the service across an Elastic Container Service (ECS) cluster.
+
+It is reliant on the definition of three environment variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_REGION`. For security reasons, these are kept out of the `.travis.yml` and are instead defined using the Travis-CI UI.
+
+Although the micro-service used in this example - as defined in `microservice/api.py` module - only returns a simple message upon a simple `GET` request, it could just as easily be a Machine Learning (ML) model-scoring service that receives the values of feature variables and returns a prediction - the overall pattern is the same.
 
 ## Initial Configuration of AWS Infrastructure
 
 Currently, the initial setup of the required AWS infrastructure is entirely manual (although this could also be scripted in the future). What's required, is an ECS cluster that is capable hosting multiple groups of Docker containers (or 'tasks' - i.e. web applications or in our case just a single micro-service), that sit behind a load balances that accepts incoming traffic and routes it to different containers in the cluster. Collectively,this constitutes a 'service' that is highly available. At a high-level, the steps required to setup this infrastructure using the AWS management console, are as follows (assuming the existence of a repository in ECR, containing our docker image):
 
-1. create a new ECS cluster, in new VPC, using instance that are greater-than-or-equal-to `t2.medium`;
+1. create a new ECS cluster, in new VPC, using instance that are ~ `t2.medium`;
     - when configuring the security group (firewall) for the cluster, consider allowing a rule for single IP to assist debugging (e.g. YOUR_LOCAL_IP_ADDRESS/32);
 2. create a new application load balancer for new VPC;
     - then create a custom security group for the load balancer (from the EC2 console), that allows anything from the outside world to pass;
