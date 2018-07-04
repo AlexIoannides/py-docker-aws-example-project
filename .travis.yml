@@ -1,7 +1,12 @@
+sudo: required
+
 language: python
 
 python: 
   - "3.6.5"
+
+services:
+  - docker
 
 install:
   - pip install pipenv
