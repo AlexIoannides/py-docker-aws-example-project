@@ -13,8 +13,9 @@ For now, it is assumed that the AWS infrastructure is already in
 existence and that Docker is running on the host machine.
 """
 
-import json
 import base64
+import json
+import os
 
 import boto3
 import docker
@@ -94,13 +95,25 @@ def read_aws_credentials(filename='.aws_credentials.json'):
     :rtype: Dict[str, str]
     """
 
-    with open(filename) as json_data:
-        credentials = json.load(json_data)
+    try:
+        with open(filename) as json_data:
+            credentials = json.load(json_data)
 
-    for required_field in ('access_key_id', 'secret_access_key', 'region'):
-        if required_field not in credentials.keys():
-            msg = '"{}" cannot be found in {}'.format(required_field, filename)
-            raise KeyError(msg)
+        for variable in ('access_key_id', 'secret_access_key', 'region'):
+            if variable not in credentials.keys():
+                msg = '"{}" cannot be found in {}'.format(variable, filename)
+                raise KeyError(msg)
+                                
+    except FileNotFoundError:
+        try:
+            credentials = {
+                'access_key_id': os.environ['AWS_ACCESS_KEY_ID'],
+                'secret_access_key': os.environ['AWS_SECRET_ACCESS_KEY'],
+                'region': os.environ['AWS_REGION']
+            }
+        except KeyError:
+            msg = 'no AWS credentials found in file or environment variables'
+            raise RuntimeError(msg)
 
     return credentials
 
