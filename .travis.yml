@@ -12,6 +12,7 @@ python:
 
   deploy:
     provider: script
-    script: pipenv run python deploy_to_aws.py
+    script:
+     - pipenv run python deploy_to_aws.py
     on:
       branch: master
