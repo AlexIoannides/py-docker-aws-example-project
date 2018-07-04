@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/AlexIoannides/py-docker-aws-example-project.svg?branch=master)](https://travis-ci.org/AlexIoannides/py-docker-aws-example-project)
+
 # Automated Deployment of a Python Service to AWS, using Docker and Boto3
 
 The purpose of this project is to demonstrate how a simple Flask-based micro-service, with a RESTful API, can be deployed to a production-like environment on AWS, where the deployment process is automated from a single Python script that performs the following steps without any manual intervention:
