@@ -12,7 +12,6 @@ python:
 
   deploy:
     provider: script
-    script:
-     - pipenv run python deploy_to_aws.py
+    script: bash build_and_deploy.sh
     on:
       branch: master
