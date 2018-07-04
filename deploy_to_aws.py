@@ -92,7 +92,7 @@ def read_aws_credentials(filename='.aws_credentials.json'):
     :param filename: Credentials filename, defaults to '.aws_credentials.json'
     :param filename: str, optional
     :return: Dictionary of AWS credentials.
-    :rtype: Optional[Dict[str, str]]
+    :rtype: Dict[str, str]
     """
 
     try:
