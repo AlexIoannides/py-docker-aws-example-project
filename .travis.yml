@@ -3,15 +3,16 @@ language: python
 python: 
   - "3.6.5"
 
-  install:
+install:
   - pip install pipenv
   - pipenv install --dev
 
-  script:
+script:
   - pipenv run python -m unittest tests/*.py
 
-  deploy:
-    provider: script
-    script: pipenv run python deploy_to_aws.py
-    on:
-      branch: master
+deploy:
+  provider: script
+  script: 
+    - pipenv run python deploy_to_aws.py
+  on:
+    branch: master
