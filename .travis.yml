@@ -9,3 +9,9 @@ python:
 
   script:
   - pipenv run python -m unittest tests/*.py
+
+  deploy:
+    provider: script
+    script: pipenv run python deploy_to_aws.py
+    on:
+      branch: master
