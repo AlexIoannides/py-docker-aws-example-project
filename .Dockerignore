@@ -1,5 +1,6 @@
 .git
 .gitignore
+.travis.yml
 .aws_credentials.json
 .vscode/
 __pycache__/
